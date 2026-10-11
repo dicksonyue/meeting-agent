@@ -1,0 +1,13 @@
+# built / downloaded artifacts (recreated by ./setup.sh)
+models/
+bin/
+tools/coreaudio-tap
+
+# private data: recordings, transcripts, notes, local settings
+transcripts/
+notes/
+settings.json
+live_tmp.*
+
+.DS_Store
+__pycache__/

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meeting-transcribe — the stack</title>
+<style>
+  :root{--bg:#0b0708;--panel:#170d10;--panel2:#1f1216;--line:#2e171c;--text:#f1e7e8;--mut:#a68e92;--dim:#6e565b;
+    --acc:#d6334b;--hot:#ff3b4e;--gold:#d9a441;
+    --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:radial-gradient(1100px 480px at 70% -8%,#2a0d15,transparent 60%),var(--bg);color:var(--text);
+    font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:0 28px}
+  a{color:var(--hot);text-decoration:none;border-bottom:1px solid #ff3b4e55}a:hover{border-bottom-color:var(--hot)}
+  code{font:.86em var(--mono);background:var(--panel2);padding:2px 6px;border-radius:5px;color:#f6d7da}
+  pre{background:#080506;border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow:auto;font:13px/1.6 var(--mono);color:#ead9db}
+  pre .c{color:var(--dim)}
+  header.hero{padding:76px 0 40px;border-bottom:1px solid var(--line);box-shadow:inset 0 3px 0 #7a1630}
+  .tag{display:inline-flex;align-items:center;gap:8px;font:600 12px var(--mono);letter-spacing:.8px;text-transform:uppercase;color:var(--hot)}
+  .tag i{width:8px;height:8px;border-radius:50%;background:var(--hot);box-shadow:0 0 12px var(--hot)}
+  h1{font-size:46px;line-height:1.1;margin:14px 0 14px;letter-spacing:-.8px}
+  h1 em{font-style:normal;background:linear-gradient(90deg,#ff5468,#b01a32);-webkit-background-clip:text;color:transparent}
+  .lead{max-width:62ch;color:var(--mut);font-size:18px;margin:0}
+  nav{display:flex;gap:18px;flex-wrap:wrap;margin-top:26px;font-size:14px}
+  section{padding:46px 0 6px}
+  h2{font-size:24px;margin:0 0 6px;letter-spacing:-.3px}
+  h2 small{display:block;font:500 12px var(--mono);letter-spacing:.8px;text-transform:uppercase;color:var(--acc);margin-bottom:6px}
+  p.sub{color:var(--mut);margin:0 0 22px;max-width:70ch}
+  .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:8px 0 6px}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 14px;position:relative}
+  .step b{display:block;font-size:14px;margin-bottom:4px}.step span{font-size:12.5px;color:var(--mut);line-height:1.45;display:block}
+  .step .n{font:600 11px var(--mono);color:var(--acc);margin-bottom:8px}
+  .step:not(:last-child)::after{content:"›";position:absolute;right:-9px;top:50%;transform:translateY(-50%);color:var(--acc);font-size:20px;z-index:1}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font:600 11px var(--mono);letter-spacing:.8px;text-transform:uppercase;color:var(--dim)}
+  td:first-child{white-space:nowrap;color:var(--mut)}td b{color:var(--text)}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card h3{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:13.5px;color:var(--mut)}
+  .note{background:#2d1a0f55;border:1px solid #5a3a1a;border-radius:10px;padding:14px 16px;font-size:14px;color:#e8c9a0;margin:16px 0}
+  footer{margin:60px 0 40px;padding-top:22px;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
+  @media(max-width:760px){.flow{grid-template-columns:1fr}.step::after{display:none}.cards{grid-template-columns:1fr}h1{font-size:34px}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+  <span class="tag"><i></i> Local · macOS · Open source</span>
+  <h1>Record the meeting.<br><em>Keep the notes.</em></h1>
+  <p class="lead">A fully local macOS meeting recorder. It captures your mic and the far end of the call, transcribes on-device with whisper.cpp, and writes a structured summary with the <code>claude</code> CLI from templates you control. Audio never leaves your Mac.</p>
+  <nav><a href="#flow">Data flow</a><a href="#stack">The stack</a><a href="#build">Build it</a><a href="#templates">Templates</a><a href="#config">Config</a></nav>
+</div></header>
+
+<div class="wrap">
+<section id="flow">
+  <h2><small>How it works</small>From sound to notes in five steps</h2>
+  <p class="sub">Capture is one Core Audio aggregate device with one IOProc, so the mic and system audio share a single clock.</p>
+  <div class="flow">
+    <div class="step"><div class="n">01</div><b>Capture</b><span>Swift Process Tap: mic + system output, mixed to 16 kHz mono PCM</span></div>
+    <div class="step"><div class="n">02</div><b>Chunk</b><span>Python splits the stream into 6 s WAVs and drives the live level meter</span></div>
+    <div class="step"><div class="n">03</div><b>Live captions</b><span>Optional: whisper.cpp on each 12 s window while you record</span></div>
+    <div class="step"><div class="n">04</div><b>Transcribe</b><span>On Stop, the full recording is merged and transcribed with timestamps</span></div>
+    <div class="step"><div class="n">05</div><b>Summarize</b><span><code>claude -p</code> with your template. Two matching <code>.md</code> notes are saved</span></div>
+  </div>
+</section>
+
+<section id="stack">
+  <h2><small>The stack</small>Small, boring, local</h2>
+  <p class="sub">No pip packages, no virtual audio driver, no ffmpeg.</p>
+  <table>
+    <tr><th>Layer</th><th>Component</th><th>Notes</th></tr>
+    <tr><td>Capture</td><td><b>Core Audio Process Tap</b> (Swift)</td><td>macOS 14.4+. Taps system output and the mic through one aggregate device; no BlackHole, no output rerouting.</td></tr>
+    <tr><td>Server</td><td><b>Python 3.9+ stdlib</b></td><td><code>http.server</code>, recorder, serial job worker, JSON API. Binds to 127.0.0.1.</td></tr>
+    <tr><td>UI</td><td><b>Vanilla JS</b> single page</td><td>Recording list with generated titles, level meter, waveform player, live and final transcript, summary, settings.</td></tr>
+    <tr><td>Transcription</td><td><b>whisper.cpp</b></td><td><code>large-v3-turbo-q5_0</code>: multilingual (English, Cantonese, Mandarin), ~570 MB.</td></tr>
+    <tr><td>Summary</td><td><b><code>claude</code> CLI</b></td><td>Template + meeting context + timestamped transcript. Only text is sent.</td></tr>
+    <tr><td>Output</td><td><b>Markdown</b></td><td><code>2026-10-11 15.00 - Title - Summary.md</code> and <code>… - Transcript.md</code>, in a folder you choose.</td></tr>
+  </table>
+</section>
+
+<section id="build">
+  <h2><small>Build it</small>Three commands</h2>
+  <p class="sub">Needs macOS 14.4+, Xcode Command Line Tools, and the <code>claude</code> CLI. Homebrew is optional.</p>
+<pre><span class="c"># clone, then:</span>
+git clone https://github.com/dicksonyue/meeting-transcribe &amp;&amp; cd meeting-transcribe
+./setup.sh      <span class="c"># builds the tap, gets whisper-cli, downloads the model</span>
+./verify.sh     <span class="c"># end-to-end self-check (deps, build, pipeline, API, live capture)</span>
+./start.sh      <span class="c"># http://127.0.0.1:8765/</span></pre>
+  <div class="note"><b>Permissions:</b> approve Microphone and Audio Recording on first record. macOS ties them to the app that launched the server, so run <code>./start.sh</code> from your own Terminal. If the level meter says "No signal", that is the first thing to check.</div>
+  <div class="note"><b>Swift version:</b> if the build says the SDK is not supported by the compiler, install the matching Command Line Tools or Xcode (<code>swiftc --version</code>).</div>
+</section>
+
+<section id="templates">
+  <h2><small>Templates</small>Summaries shaped to the meeting</h2>
+  <p class="sub">A template is a <code>.md</code> file in the templates folder. New files appear without a restart. Pick one before recording, or re-summarize any recording with another.</p>
+  <div class="cards">
+    <div class="card"><h3>Meeting Summary</h3><p>Date and speakers, discussion summary, verdict per topic, next actions, topics in detail with original quotes and conclusions, suggestions.</p></div>
+    <div class="card"><h3>Interview</h3><p>Background, Q&amp;A with quotes, evidence-backed strengths and gaps, skills table, follow-ups.</p></div>
+    <div class="card"><h3>Project Status Review</h3><p>Green / Amber / Red, progress, milestones, risks and blockers, decisions needed, actions.</p></div>
+    <div class="card"><h3>Panel</h3><p>Panelists, discussion by question, agreement and disagreement, notable quotes, audience Q&amp;A.</p></div>
+  </div>
+<pre style="margin-top:14px">---
+name: Daily Standup
+description: Yesterday / today / blockers per person
+---
+Summarize this as a daily standup: for each person, what they did, what they will do, and blockers.</pre>
+</section>
+
+<section id="config">
+  <h2><small>Config</small>Settings and environment</h2>
+  <p class="sub">Notes folder, templates folder and default template are set in the app (⚙ Settings). Environment variables override them.</p>
+  <table>
+    <tr><th>Variable</th><th>Default</th><th>Meaning</th></tr>
+    <tr><td><code>MT_NOTES_DIR</code></td><td>./notes</td><td>Where Summary and Transcript notes are written.</td></tr>
+    <tr><td><code>MT_TEMPLATES_DIR</code></td><td>./templates</td><td>Folder of summary templates.</td></tr>
+    <tr><td><code>MT_PORT</code></td><td>8765</td><td>Server port.</td></tr>
+    <tr><td><code>MT_SAVE_DIR</code></td><td>./transcripts</td><td>Raw sessions: chunks, audio, transcript JSON, summary history.</td></tr>
+    <tr><td><code>MT_MIC_NAME</code></td><td>system default</td><td>Substring of the input device to use as the mic.</td></tr>
+    <tr><td><code>MT_MODEL</code></td><td>models/ggml-large-v3-turbo-q5_0.bin</td><td>Any whisper.cpp <code>ggml-*.bin</code> model.</td></tr>
+    <tr><td><code>MT_CLAUDE_BIN</code></td><td>auto</td><td>Path to the <code>claude</code> CLI.</td></tr>
+    <tr><td><code>MT_CLAUDE_SUMMARY_MODEL</code></td><td>sonnet</td><td>Model for summaries.</td></tr>
+  </table>
+</section>
+
+<footer>See <a href="STACK.md">STACK.md</a> for the full reference including the HTTP API and launchd autostart. Whisper has no speaker diarization, so speaker counts in summaries are estimates. Recording others may require their consent where you live.</footer>
+</div>
+</body>
+</html>
