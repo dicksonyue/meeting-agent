@@ -11,6 +11,22 @@ the **`claude` CLI**, using templates you can edit.
   `2026-10-11 15.00 - Q4 Planning Sync - Summary.md` and `… - Transcript.md`.
 - **Templates:** Meeting Summary, Interview, Project Status Review, Panel. Add your own by dropping a `.md` into the templates folder. Re-summarize any recording with a different template.
 
+## Screenshots
+
+All data below is synthetic (a scripted `say` voice recording and invented meeting titles); no real recordings or paths are shown.
+
+**A finished meeting**: matching Summary and Transcript notes with Reveal in Finder, source-audio waveform, template picker with Re-summarize, and the six-section Meeting Summary.
+
+![A finished meeting with summary, waveform and note paths](docs/screenshots/meeting.png)
+
+**Recording**: the studio-style REC switch is lit "ON AIR", with a live input level meter and a live transcript (newest line first).
+
+![Recording with ON AIR switch, level meter and live transcript](docs/screenshots/recording.png)
+
+**Settings**: choose where the notes and templates live, and the default template.
+
+![Settings dialog](docs/screenshots/settings.png)
+
 ## Quick start
 
 Requires macOS 14.4+, Xcode Command Line Tools, and the [`claude` CLI](https://claude.com/claude-code).

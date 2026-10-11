@@ -123,7 +123,7 @@ canvas{width:100%;height:64px;display:block;cursor:pointer}
   <div class="hint">Each <code>.md</code> file in this folder is a summary template (optional <code>name:</code> / <code>description:</code> front matter, the rest is the prompt). New files appear automatically; no restart needed.</div>
   <label for="deftpl">Default template</label>
   <select class="sel" id="deftpl" style="max-width:none"></select>
-  <div class="hint">Each meeting is saved as one markdown note named<br><code id="ex">2026-10-11 14.30 - Meeting title.md</code><br>The title is generated from the meeting summary. The note contains the summary and the timestamped transcript.</div>
+  <div class="hint">Each meeting is saved as two markdown notes with matching names:<br><code>2026-10-11 14.30 - Meeting title - Summary.md</code><br><code>2026-10-11 14.30 - Meeting title - Transcript.md</code><br>The title is generated from the summary. The summary note links to the transcript note.</div>
   <div class="err" id="seterr"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="setcancel">Cancel</button><button class="btn pri" id="setsave">Save</button></div>
 </div></div>
