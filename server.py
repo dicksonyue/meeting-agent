@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""meeting-transcribe: record (Core Audio tap) -> transcribe (whisper.cpp) -> summarize (claude).
+"""meeting-agent: record (Core Audio tap) -> transcribe (whisper.cpp) -> summarize (claude).
 Python 3.9+ stdlib only."""
 import array, glob, json, os, re, queue, shutil, signal, subprocess, tempfile, threading, time, wave
 from datetime import datetime
@@ -638,7 +638,7 @@ def recover_orphans():
 if __name__ == "__main__":
     os.makedirs(SAVE_DIR, exist_ok=True)
     recover_orphans()
-    print("meeting-transcribe on http://127.0.0.1:%d/ (save: %s)" % (PORT, SAVE_DIR), flush=True)
+    print("meeting-agent on http://127.0.0.1:%d/ (save: %s)" % (PORT, SAVE_DIR), flush=True)
     try:
         ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()
     finally:

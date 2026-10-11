@@ -44,7 +44,7 @@ PY
 echo "4. Server API"
 MT_PORT=8799 MT_SAVE_DIR="$T/srv" python3 server.py >"$T/srv.log" 2>&1 & SRV=$!
 sleep 1.5
-curl -sf localhost:8799/ | grep -q "Meeting Recorder" && ok "GET / serves UI" || bad "GET /"
+curl -sf localhost:8799/ | grep -q "Meeting Agent" && ok "GET / serves UI" || bad "GET /"
 curl -sf localhost:8799/api/status | python3 -c 'import sys,json;d=json.load(sys.stdin)["deps"];sys.exit(0 if all(d.values()) else 1)' \
   && ok "/api/status deps all present" || bad "/api/status reports missing deps"
 [ "$(curl -s -o /dev/null -w %{http_code} localhost:8799/api/file/../../etc/passwd)" = 404 ] && ok "path traversal blocked" || bad "path traversal"

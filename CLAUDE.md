@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A fully local macOS meeting recorder → transcriber → summarizer. A Swift Core Audio Process Tap captures mic + system output, whisper.cpp transcribes locally, and the `claude` CLI writes the summary from a template. Only transcript text goes to Claude.
+Meeting Agent is a fully local macOS meeting recorder → transcriber → summarizer. A Swift Core Audio Process Tap captures mic + system output, whisper.cpp transcribes locally, and the `claude` CLI writes the summary from a template. Only transcript text goes to Claude.
 
 ## Commands
 

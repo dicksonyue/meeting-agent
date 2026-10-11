@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>meeting-transcribe — the stack</title>
+<title>Meeting Agent — the stack</title>
 <style>
   :root{--bg:#0b0708;--panel:#170d10;--panel2:#1f1216;--line:#2e171c;--text:#f1e7e8;--mut:#a68e92;--dim:#6e565b;
     --acc:#d6334b;--hot:#ff3b4e;--gold:#d9a441;
@@ -49,7 +49,7 @@
 <header class="hero"><div class="wrap">
   <span class="tag"><i></i> Local · macOS · Open source</span>
   <h1>Record the meeting.<br><em>Keep the notes.</em></h1>
-  <p class="lead">A fully local macOS meeting recorder. It captures your mic and the far end of the call, transcribes on-device with whisper.cpp, and writes a structured summary with the <code>claude</code> CLI from templates you control. Audio never leaves your Mac.</p>
+  <p class="lead">Meeting Agent is a fully local macOS note-taker. It captures your mic and the far end of the call, transcribes on-device with whisper.cpp, and writes a structured summary with the <code>claude</code> CLI from templates you control. Audio never leaves your Mac.</p>
   <nav><a href="#flow">Data flow</a><a href="#stack">The stack</a><a href="#build">Build it</a><a href="#templates">Templates</a><a href="#config">Config</a></nav>
 </div></header>
 
@@ -84,7 +84,7 @@
   <h2><small>Build it</small>Three commands</h2>
   <p class="sub">Needs macOS 14.4+, Xcode Command Line Tools, and the <code>claude</code> CLI. Homebrew is optional.</p>
 <pre><span class="c"># clone, then:</span>
-git clone https://github.com/dicksonyue/meeting-transcribe &amp;&amp; cd meeting-transcribe
+git clone https://github.com/dicksonyue/meeting-agent &amp;&amp; cd meeting-agent
 ./setup.sh      <span class="c"># builds the tap, gets whisper-cli, downloads the model</span>
 ./verify.sh     <span class="c"># end-to-end self-check (deps, build, pipeline, API, live capture)</span>
 ./start.sh      <span class="c"># http://127.0.0.1:8765/</span></pre>

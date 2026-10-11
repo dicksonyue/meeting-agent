@@ -112,7 +112,7 @@ let micUID = str(mic, kAudioDevicePropertyDeviceUID)
 
 let desc: [String: Any] = [
     kAudioAggregateDeviceNameKey: aggName,
-    kAudioAggregateDeviceUIDKey: "com.meeting-transcribe.\(UUID().uuidString)",
+    kAudioAggregateDeviceUIDKey: "com.meeting-agent.\(UUID().uuidString)",
     kAudioAggregateDeviceMainSubDeviceKey: micUID,
     kAudioAggregateDeviceIsPrivateKey: true,
     kAudioAggregateDeviceIsStackedKey: false,

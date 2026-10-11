@@ -1,6 +1,8 @@
-# meeting-transcribe
+# Meeting Agent
 
-A local macOS meeting recorder. It captures your **microphone and the other side of the call**
+*Your private AI note-taker. It joins every meeting on your Mac, keeps the minutes, and never sends your audio anywhere.*
+
+Meeting Agent is a local macOS app. It captures your **microphone and the other side of the call**
 (Zoom, Teams, browser), transcribes on-device with **whisper.cpp**, and writes a structured summary with
 the **`claude` CLI**, using templates you can edit.
 
@@ -32,7 +34,7 @@ All data below is synthetic (a scripted `say` voice recording and invented meeti
 Requires macOS 14.4+, Xcode Command Line Tools, and the [`claude` CLI](https://claude.com/claude-code).
 
 ```bash
-git clone https://github.com/dicksonyue/meeting-transcribe && cd meeting-transcribe
+git clone https://github.com/dicksonyue/meeting-agent && cd meeting-agent
 ./setup.sh     # builds the tap, gets whisper-cli, downloads the ~570 MB model
 ./verify.sh    # optional: end-to-end self-check
 ./start.sh     # opens http://127.0.0.1:8765/

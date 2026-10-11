@@ -1,6 +1,6 @@
-# meeting-transcribe — Stack & Build
+# Meeting Agent — Stack & Build
 
-A fully **local** macOS meeting recorder → transcriber → summarizer. It captures your
+A fully **local** macOS meeting agent: recorder → transcriber → summarizer. It captures your
 **mic + the meeting far-end** (Zoom / Teams / browser), transcribes with **whisper.cpp**,
 and summarizes with the **`claude` CLI** using a template you choose. **No audio leaves the machine.**
 Only the transcript text is sent to Claude, for the summary.
@@ -57,7 +57,7 @@ are rewritten and renamed if the title changed. Earlier summaries are kept in `t
 ## Build from scratch
 
 ```bash
-git clone https://github.com/dicksonyue/meeting-transcribe && cd meeting-transcribe
+git clone https://github.com/dicksonyue/meeting-agent && cd meeting-agent
 ./setup.sh      # builds the tap, gets whisper-cli (brew if present, else builds whisper.cpp into bin/), downloads the model
 ./verify.sh     # checks deps, Swift build, full pipeline on synthetic speech, server API, live capture
 ./start.sh      # starts the server and opens http://127.0.0.1:8765/
@@ -145,16 +145,16 @@ coreaudio-tap --cleanup [Name]                            # destroy stale "Meeti
 
 ## Autostart with launchd (optional)
 
-`~/Library/LaunchAgents/com.you.meeting-transcribe.plist`:
+`~/Library/LaunchAgents/com.you.meeting-agent.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>Label</key><string>com.you.meeting-transcribe</string>
+  <key>Label</key><string>com.you.meeting-agent</string>
   <key>ProgramArguments</key>
-  <array><string>/usr/bin/python3</string><string>/Users/YOU/meeting-transcribe/server.py</string></array>
-  <key>WorkingDirectory</key><string>/Users/YOU/meeting-transcribe</string>
+  <array><string>/usr/bin/python3</string><string>/Users/YOU/meeting-agent/server.py</string></array>
+  <key>WorkingDirectory</key><string>/Users/YOU/meeting-agent</string>
   <key>EnvironmentVariables</key><dict>
     <key>MT_PORT</key><string>8765</string>
     <key>PATH</key><string>/Users/YOU/.local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
