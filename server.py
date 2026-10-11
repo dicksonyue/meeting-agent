@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """meeting-transcribe: record (Core Audio tap) -> transcribe (whisper.cpp) -> summarize (claude).
 Python 3.9+ stdlib only."""
-import array, glob, json, os, re, queue, shutil, signal, subprocess, threading, time, wave
+import array, glob, json, os, re, queue, shutil, signal, subprocess, tempfile, threading, time, wave
 from datetime import datetime
 from urllib.parse import parse_qs
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -33,6 +33,23 @@ def find(name, env=None):
 def deps():
     return {"tap": TAP if os.access(TAP, os.X_OK) else None, "whisper-cli": find("whisper-cli"),
             "claude": find("claude", "MT_CLAUDE_BIN"), "model": MODEL if os.path.exists(MODEL) else None}
+
+
+SID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}$")
+MAX_BODY = 1 << 20  # 1 MiB; API bodies are tiny JSON
+
+
+def valid_sid(sid):
+    return isinstance(sid, str) and bool(SID_RE.match(sid))
+
+
+def inside(path, folder):
+    """True if `path` really lives inside `folder` (after resolving symlinks and '..')."""
+    try:
+        path, folder = os.path.realpath(path), os.path.realpath(folder)
+        return os.path.commonpath([path, folder]) == folder
+    except ValueError:
+        return False
 
 
 def sid_time(sid):
@@ -91,8 +108,8 @@ def save_settings(body):
 
 
 def pick_folder(prompt="Choose a folder"):
-    r = subprocess.run(["osascript", "-e", 'POSIX path of (choose folder with prompt "%s")' % prompt.replace('"', "")],
-                       capture_output=True, text=True, timeout=300)
+    script = 'on run argv\nPOSIX path of (choose folder with prompt (item 1 of argv))\nend run'
+    r = subprocess.run(["osascript", "-e", script, str(prompt)[:120]], capture_output=True, text=True, timeout=300)
     return r.stdout.strip().rstrip("/") if r.returncode == 0 else None
 
 
@@ -387,7 +404,8 @@ class Worker:
         context = "Meeting context: recorded %s, duration %s.\nThe transcript has [m:ss] timestamps." % (
             sid_time(sid).strftime("%A %Y-%m-%d %H:%M"), fmt_clock(dur))
         text = "\n".join("[%s] %s" % (fmt_clock(g["start"]), g["text"]) for g in segs)
-        summary = run([d["claude"], "-p", "--model", CLAUDE_MODEL], input=t["body"] + RULES + context + "\n\n" + text)
+        summary = run([d["claude"], "-p", "--model", CLAUDE_MODEL, "--tools", "", "--no-session-persistence"],
+                      cwd=tempfile.gettempdir(), input=t["body"] + RULES + context + "\n\n" + text)
         hist = os.path.join(sdir, "summaries")
         os.makedirs(hist, exist_ok=True)
         open(os.path.join(hist, "%s-%s.md" % (datetime.now().strftime("%Y%m%d-%H%M%S"), t["id"])), "w").write(summary)
@@ -435,7 +453,7 @@ def wav_duration(path):
 
 def session_detail(sid):
     sdir = os.path.join(SAVE_DIR, sid)
-    if sid in ("", ".", "..") or not os.path.isdir(sdir):
+    if not valid_sid(sid) or not os.path.isdir(sdir):
         return None
     cur = rec.session if rec.session and rec.session["id"] == sid else None
     final = os.path.exists(os.path.join(sdir, "transcript.json"))
@@ -501,7 +519,21 @@ class H(BaseHTTPRequestHandler):
             f.seek(start)
             self.wfile.write(f.read(end - start + 1))
 
+    def guard(self, post):
+        """The API can start the mic and write files, so only the local UI may call it.
+        Host check stops DNS rebinding; Origin check stops other sites; POSTs also need a custom header,
+        which browsers only allow cross-site after a CORS preflight that this server never grants."""
+        ok_hosts = ("127.0.0.1:%d" % PORT, "localhost:%d" % PORT)
+        origin = self.headers.get("Origin")
+        if self.headers.get("Host") not in ok_hosts or (origin and origin not in ("http://" + h for h in ok_hosts)) \
+                or (post and self.headers.get("X-MT") != "1"):
+            self.send(403, {"error": "forbidden"})
+            return False
+        return True
+
     def do_GET(self):
+        if not self.guard(False):
+            return
         p = self.path.split("?")[0]
         if p in ("/", "/index.html"):
             return self.send(200, open(os.path.join(ROOT, "index.html"), "rb").read(), "text/html")
@@ -518,7 +550,7 @@ class H(BaseHTTPRequestHandler):
             return self.send(200, list_sessions())
         parts = p.split("/")
         if len(parts) == 4 and parts[:2] == ["", "api"] and parts[2] in ("session", "audio", "peaks") \
-                and parts[3] not in ("", ".", ".."):
+                and valid_sid(parts[3]):
             sid = parts[3]
             if parts[2] == "session":
                 d = session_detail(sid)
@@ -530,15 +562,20 @@ class H(BaseHTTPRequestHandler):
             return self.send(404, {"error": "no audio yet"})
         # /api/file/<sid>/<name>
         if len(parts) == 5 and parts[:3] == ["", "api", "file"] and parts[4] in ("transcript.txt", "summary.md") \
-                and parts[3] not in ("", ".", ".."):
+                and valid_sid(parts[3]):
             fp = os.path.join(SAVE_DIR, parts[3], parts[4])
             if os.path.exists(fp):
                 return self.send(200, open(fp, "rb").read(), "text/plain")
         self.send(404, {"error": "not found"})
 
     def do_POST(self):
+        if not self.guard(True):
+            return
         route, _, q = self.path.partition("?")
-        raw = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        n = int(self.headers.get("Content-Length") or 0)
+        if n > MAX_BODY:
+            return self.send(413, {"error": "body too large"})
+        raw = self.rfile.read(n)
         try:
             body = json.loads(raw or b"{}")
         except ValueError:
@@ -553,7 +590,7 @@ class H(BaseHTTPRequestHandler):
                     return self.send(200, {"path": None})
             if route == "/api/reveal":
                 path = body.get("path", "")
-                if os.path.isfile(path) and os.path.abspath(path).startswith(load_settings()["notes_dir"]):
+                if os.path.isfile(path) and inside(path, load_settings()["notes_dir"]):
                     subprocess.run(["open", "-R", path])
                     return self.send(200, {"ok": True})
                 return self.send(404, {"error": "not found"})
@@ -565,7 +602,7 @@ class H(BaseHTTPRequestHandler):
                 return self.send(404, {"error": "folder not found"})
             if route == "/api/resummarize":
                 sid, sdir = body.get("id", ""), os.path.join(SAVE_DIR, body.get("id", ""))
-                if sid in ("", ".", "..") or not os.path.isdir(sdir):
+                if not valid_sid(sid) or not os.path.isdir(sdir):
                     return self.send(404, {"error": "session not found"})
                 j = worker.jobs.get(sid)
                 if (j and j["state"] not in ("done", "error")) or (rec.session and rec.session["id"] == sid):
